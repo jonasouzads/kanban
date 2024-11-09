@@ -1,135 +1,123 @@
 "use client";
 
-import React, { useState } from "react";
-import { IoAddOutline } from "react-icons/io5";
-import { BsThreeDots } from "react-icons/bs";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { NextPage } from 'next'; // Importe o tipo NextPage
 import { supabase } from "@/lib/supabase";
-import { ColumnProps, LeadType } from "@/types";
-import { cn } from "@/lib/utils";
-
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import DropIndicator from "@/components/board/DropIndicator";
-import AddLeadModal from "@/components/modals/AddLeadModal";
-import LeadCard from "@/components/board/LeadCard";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
-const Column = ({ column, leads, setLeads, boardId }: ColumnProps) => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [columnName, setColumnName] = useState(column.title);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+interface NewBoardForm {
+  nome: string;
+  descricao: string;
+}
 
-  // Salva o novo nome da coluna no banco de dados e sai do modo de edição
-  const saveColumnName = async () => {
+const NewBoardPage: NextPage = () => {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState<NewBoardForm>({
+    nome: "",
+    descricao: "",
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     try {
-      const { error } = await supabase
-        .from("columns")
-        .update({ title: columnName })
-        .eq("id", column.id);
+      setLoading(true);
 
-      if (error) throw error;
-      setIsEditing(false);
+      // Criar o board
+      const { data: board, error: boardError } = await supabase
+        .from('boards')
+        .insert({
+          name: formData.nome,
+          description: formData.descricao
+        })
+        .select()
+        .single();
+
+      if (boardError) throw boardError;
+
+      // Criar colunas padrão
+      const defaultColumns = [
+        { titulo: "Novos Leads", status: "new" },
+        { titulo: "Em Contato", status: "contact" },
+        { titulo: "Aguardando", status: "waiting" },
+        { titulo: "Convertidos", status: "converted" },
+        { titulo: "Perdidos", status: "lost" }
+      ];
+
+      const { error: columnsError } = await supabase
+        .from('columns')
+        .insert(
+          defaultColumns.map((col, index) => ({
+            board_id: board.id,
+            title: col.titulo,
+            status: col.status,
+            position: index
+          }))
+        );
+
+      if (columnsError) throw columnsError;
+
+      router.push(`/boards/${board.id}`);
     } catch (error) {
-      console.error("Erro ao atualizar o nome da coluna:", error);
-      alert("Erro ao atualizar o nome da coluna.");
+      console.error("Erro ao criar board:", error);
+      alert("Erro ao criar board. Tente novamente.");
+    } finally {
+      setLoading(false);
     }
   };
-
-  // Triggers de atualização para teclado e foco
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      saveColumnName();
-    }
-  };
-
-  const handleBlur = () => {
-    saveColumnName();
-  };
-
-  const filteredLeads = leads
-    .filter((lead) => lead.column_id === column.id)
-    .sort((a, b) => a.position - b.position);
 
   return (
-    <div className="w-[310px] shrink-0">
-      <div className="flex justify-between items-center p-3">
-        <div className="flex items-center gap-3">
-          {isEditing ? (
+    <div className="container mx-auto max-w-2xl p-6">
+      <div className="bg-white rounded-lg shadow-sm p-6">
+        <h1 className="text-2xl font-bold mb-6">Criar Novo Board</h1>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-2">
+            <label htmlFor="nome" className="text-sm font-medium">
+              Nome do Board
+            </label>
             <Input
-              value={columnName}
-              onChange={(e) => setColumnName(e.target.value)}
-              onBlur={handleBlur}
-              onKeyPress={handleKeyPress}
-              autoFocus
-              className="text-sm font-medium"
+              id="nome"
+              placeholder="Ex: Leads WhatsApp"
+              value={formData.nome}
+              onChange={(e) => setFormData(prev => ({ ...prev, nome: e.target.value }))}
+              required
             />
-          ) : (
-            <h3
-              className="font-medium text-neutral-700 cursor-pointer"
-              onClick={() => setIsEditing(true)}
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="descricao" className="text-sm font-medium">
+              Descrição
+            </label>
+            <Textarea
+              id="descricao"
+              placeholder="Descrição do board..."
+              value={formData.descricao}
+              onChange={(e) => setFormData(prev => ({ ...prev, descricao: e.target.value }))}
+              rows={3}
+            />
+          </div>
+
+          <div className="flex gap-3 justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => router.back()}
+              disabled={loading}
             >
-              {columnName}
-            </h3>
-          )}
-          <span className="text-sm text-neutral-400">{filteredLeads.length}</span>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setIsModalOpen(true)}
-            className="text-neutral-500 hover:text-neutral-900"
-          >
-            <IoAddOutline className="w-5 h-5" />
-          </Button>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-neutral-500 hover:text-neutral-900"
-              >
-                <BsThreeDots className="w-5 h-5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setIsEditing(true)}>
-                Editar Coluna
-              </DropdownMenuItem>
-              <DropdownMenuItem className="text-red-600">
-                Remover Coluna
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? "Criando..." : "Criar Board"}
+            </Button>
+          </div>
+        </form>
       </div>
-
-      <div
-        className={cn(
-          "h-full w-[310px] p-3 rounded-xl transition-colors bg-neutral-50/50"
-        )}
-      >
-        {filteredLeads.map((lead) => (
-          <LeadCard key={lead.id} {...lead} />
-        ))}
-        <DropIndicator beforeId={null} column={column.id} />
-      </div>
-
-      <AddLeadModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        boardId={boardId}
-        columnId={column.id}
-      />
     </div>
   );
 };
 
-export default Column;
+export default NewBoardPage;
