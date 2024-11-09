@@ -3,8 +3,10 @@ import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 
 export async function GET(request: Request) {
+  // Defina o requestUrl aqui para que esteja acessível no catch
+  const requestUrl = new URL(request.url);
+  
   try {
-    const requestUrl = new URL(request.url);
     const code = requestUrl.searchParams.get('code');
 
     if (code) {
