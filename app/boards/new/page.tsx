@@ -17,19 +17,14 @@ import {
 import DropIndicator from "@/components/board/DropIndicator";
 import AddLeadModal from "@/components/modals/AddLeadModal";
 import LeadCard from "@/components/board/LeadCard";
-import { Input } from "@/components/ui/input"; // Importar o componente Input
+import { Input } from "@/components/ui/input";
 
-const Column = ({
-  column,
-  leads,
-  setLeads,
-  boardId,
-}: ColumnProps) => {
+const Column = ({ column, leads, setLeads, boardId }: ColumnProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [columnName, setColumnName] = useState(column.title);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Função para salvar o novo nome da coluna no banco de dados
+  // Salva o novo nome da coluna no banco de dados e sai do modo de edição
   const saveColumnName = async () => {
     try {
       const { error } = await supabase
@@ -38,14 +33,14 @@ const Column = ({
         .eq("id", column.id);
 
       if (error) throw error;
-      setIsEditing(false); // Sair do modo de edição após salvar
+      setIsEditing(false);
     } catch (error) {
       console.error("Erro ao atualizar o nome da coluna:", error);
       alert("Erro ao atualizar o nome da coluna.");
     }
   };
 
-  // Manipulador de tecla Enter e perda de foco
+  // Triggers de atualização para teclado e foco
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
       saveColumnName();
@@ -68,15 +63,15 @@ const Column = ({
             <Input
               value={columnName}
               onChange={(e) => setColumnName(e.target.value)}
-              onBlur={handleBlur} // Salvar ao perder o foco
-              onKeyPress={handleKeyPress} // Salvar ao pressionar Enter
+              onBlur={handleBlur}
+              onKeyPress={handleKeyPress}
               autoFocus
               className="text-sm font-medium"
             />
           ) : (
             <h3
               className="font-medium text-neutral-700 cursor-pointer"
-              onClick={() => setIsEditing(true)} // Ativa o modo de edição ao clicar
+              onClick={() => setIsEditing(true)}
             >
               {columnName}
             </h3>
@@ -137,3 +132,4 @@ const Column = ({
   );
 };
 
+export default Column;
