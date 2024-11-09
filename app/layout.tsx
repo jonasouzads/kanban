@@ -1,4 +1,3 @@
-// app/layout.tsx
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
@@ -12,16 +11,20 @@ export const metadata: Metadata = {
   description: "Wizebot Kanban",
 };
 
-// app/layout.tsx
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Função de exemplo para onSearch
+  const handleSearch = (term: string) => {
+    console.log("Search term:", term);
+  };
+
   return (
     <html lang="pt-BR">
       <body className={`${inter.className} flex flex-col min-h-screen bg-white`}>
-        <Header />
+        <Header onSearch={handleSearch} />
         <main className="flex-1 overflow-hidden bg-gray-50">
           {children}
         </main>
